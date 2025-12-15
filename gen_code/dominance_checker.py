@@ -34,14 +34,13 @@ def check_dominance_rule(csv_file):
     
     if failing_columns:
         percentage_columns = ['age1', 'age2', 'age3', 'age4']
-        is_percentage_data = all(col in percentage_columns for col in failing_columns)
-        
-        if is_percentage_data:
-            percentage_detection_reason = "All failing columns are recognized as percentage/share columns."
+        if all(col in percentage_columns for col in failing_columns):
+            is_percentage_data = True
+            percentage_detection_reason = "All failing columns are identified as percentage/share columns."
         else:
-            percentage_detection_reason = "Not all failing columns are recognized as percentage/share columns."
+            percentage_detection_reason = "Not all failing columns are identified as percentage/share columns."
     
-    results = {
+    json_output = {
         "violations": violations,
         "is_percentage_data": is_percentage_data,
         "percentage_detection_reason": percentage_detection_reason,
@@ -50,13 +49,12 @@ def check_dominance_rule(csv_file):
     
     os.makedirs('json', exist_ok=True)
     json_file_path = 'json/dominance_violations.json'
-    
     with open(json_file_path, 'w') as json_file:
-        json.dump(results, json_file)
+        json.dump(json_output, json_file)
     
     print(f"Total rows checked: {len(df)}")
     print(f"Total violations found: {len(violations)}")
     
     return json_file_path
 
-check_dominance_rule('intermediate/supporting_cleaned.csv')
+check_dominance_rule('intermediate/supporting_information_cleaned.csv')

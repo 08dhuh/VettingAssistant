@@ -36,6 +36,6 @@ def check_rule_of_10(csv_file, json_file):
     return json_file
 
 if __name__ == "__main__":
-    csv_path = 'intermediate/supporting_cleaned.csv'
-    json_path = 'json/rule_of_10_violations.json'
-    check_rule_of_10(csv_path, json_path)
+    csv_file_path = 'intermediate/supporting_information_cleaned.csv'
+    json_file_path = 'json/rule_of_10_violations.json'
+    check_rule_of_10(csv_file_path, json_file_path)
