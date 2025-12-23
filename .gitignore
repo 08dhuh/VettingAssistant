@@ -5,3 +5,4 @@ intermediate/
 tests/
 __pycache__/
 *.pyc
+.python-version
