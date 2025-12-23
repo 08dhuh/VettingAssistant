@@ -1,5 +1,5 @@
 import io
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Dict, Any
 
 import pandas as pd
 
@@ -11,8 +11,11 @@ from .models import (
     Warning,
     ViolationType,
     WarningType,
+    ModelComparisonResult,
+    MultiModelValidationResult,
 )
 from .parsers import DescriptionParser, RegressionParser, DataLoader
+from .validators import validate_observation_differences
 
 
 class RegressionChecker:
@@ -171,6 +174,69 @@ class RegressionChecker:
                     "r_squared_warning": self.R_SQUARED_WARNING_THRESHOLD,
                 },
             },
+        )
+
+    def validate_multiple(
+        self,
+        models: List[Dict[str, Any]],
+    ) -> MultiModelValidationResult:
+        """
+        Validate multiple regression models and perform pairwise comparisons.
+
+        Args:
+            models: List of model dictionaries, each containing:
+                - 'model_id': str - Identifier for the model (e.g., "Model 1")
+                - 'description': Union[str, DatasetMetadata, io.BytesIO] - Description document
+                - 'output': Union[io.BytesIO, str] - Regression output file
+                - 'supporting': Optional[Union[pd.DataFrame, io.BytesIO, str]] - Supporting data
+                - 'description_file_type': str - Type of description file
+                - 'output_file_type': str - Type of output file
+                - 'supporting_file_type': Optional[str] - Type of supporting file
+
+        Returns:
+            MultiModelValidationResult with individual results and comparison results
+        """
+        individual_results: List[RegressionValidationResult] = []
+        models_for_comparison: List[tuple] = []
+
+        # Step 1: Validate each model individually
+        for model_data in models:
+            model_id = model_data.get("model_id", f"Model {len(individual_results) + 1}")
+
+            result = self.validate(
+                description=model_data.get("description"),
+                output=model_data.get("output"),
+                supporting=model_data.get("supporting"),
+                description_file_type=model_data.get("description_file_type", "docx"),
+                output_file_type=model_data.get("output_file_type", "xlsx"),
+                supporting_file_type=model_data.get("supporting_file_type"),
+            )
+
+            # Add model_id to the result
+            result.model_id = model_id
+            individual_results.append(result)
+
+            # Collect models with valid metadata for comparison
+            if result.regression_metadata is not None:
+                models_for_comparison.append((model_id, result.regression_metadata))
+
+        # Step 2: Perform pairwise comparison if we have 2+ valid models
+        comparison_results: List[ModelComparisonResult] = []
+        if len(models_for_comparison) >= 2:
+            comparison_results = validate_observation_differences(models_for_comparison)
+
+        # Step 3: Determine overall pass/fail
+        # Overall passes only if all individual models pass AND all comparisons pass
+        all_individual_passed = all(r.passed for r in individual_results)
+        all_comparisons_passed = all(
+            r.passed is not False for r in comparison_results
+        )  # None (undetermined) doesn't fail
+        overall_passed = all_individual_passed and all_comparisons_passed
+
+        return MultiModelValidationResult(
+            individual_results=individual_results,
+            comparison_results=comparison_results,
+            overall_passed=overall_passed,
         )
 
     def _parse_description(

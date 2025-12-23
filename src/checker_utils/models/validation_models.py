@@ -12,6 +12,7 @@ class ViolationType(Enum):
     INSUFFICIENT_DF = "insufficient_degrees_of_freedom"
     NUMERIC_VARIABLE = "numeric_variable_disclosure_risk"
     HIGH_R_SQUARED = "high_r_squared_with_intercept"
+    OBSERVATION_DIFFERENCE = "observation_difference"
 
 
 class WarningType(Enum):
@@ -158,6 +159,7 @@ class RegressionValidationResult:
     regression_metadata: Optional[RegressionMetadata] = None
     description_metadata: Optional[DatasetMetadata] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
+    model_id: Optional[str] = None  # Identifier for multi-model validation
 
     @property
     def summary(self) -> str:
@@ -167,3 +169,42 @@ class RegressionValidationResult:
     @property
     def has_warnings(self) -> bool:
         return len(self.warnings) > 0
+
+
+@dataclass
+class ModelComparisonResult:
+    """Result of comparing observation counts between two regression models"""
+    model_a_id: str  # e.g., "Model 1" or filename
+    model_b_id: str
+    n_a: Optional[int]
+    n_b: Optional[int]
+    difference: Optional[int]
+    is_subset: Optional[bool]
+    passed: Optional[bool]  # None if cannot be determined (e.g., suppressed counts)
+    message: str
+
+    def __str__(self) -> str:
+        status = "PASS" if self.passed else ("FAIL" if self.passed is False else "CHECK")
+        return f"{self.model_a_id} vs {self.model_b_id}: {status} - {self.message}"
+
+
+@dataclass
+class MultiModelValidationResult:
+    """Result of validating multiple regression models"""
+    individual_results: List[RegressionValidationResult]
+    comparison_results: List[ModelComparisonResult]
+    overall_passed: bool
+
+    @property
+    def summary(self) -> str:
+        individual_passed = sum(1 for r in self.individual_results if r.passed)
+        comparison_failed = sum(1 for r in self.comparison_results if r.passed is False)
+        status = "PASS" if self.overall_passed else "FAIL"
+        return (
+            f"{status}: {individual_passed}/{len(self.individual_results)} models passed, "
+            f"{comparison_failed} comparison violation(s)"
+        )
+
+    @property
+    def has_comparison_violations(self) -> bool:
+        return any(r.passed is False for r in self.comparison_results)

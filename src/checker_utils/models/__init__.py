@@ -8,6 +8,8 @@ from .validation_models import (
     RegressionCoefficient,
     RegressionMetadata,
     RegressionValidationResult,
+    ModelComparisonResult,
+    MultiModelValidationResult,
 )
 
 __all__ = [
@@ -20,4 +22,6 @@ __all__ = [
     "RegressionCoefficient",
     "RegressionMetadata",
     "RegressionValidationResult",
+    "ModelComparisonResult",
+    "MultiModelValidationResult",
 ]

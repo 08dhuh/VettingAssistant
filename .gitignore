@@ -1,1 +1,7 @@
 secrets.toml
+.venv
+.streamlit
+intermediate/
+tests/
+__pycache__/
+*.pyc

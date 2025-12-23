@@ -208,6 +208,7 @@ class DominanceD50Validator(BaseValidator):
                 return col
         return None
 
+    #flag: generalise this
     def _find_mean_column(self, df: pd.DataFrame, metadata: DatasetMetadata) -> Optional[str]:
         """Find the column containing mean/average values"""
         # Try metadata first
@@ -243,6 +244,7 @@ class DominanceD50Validator(BaseValidator):
 
         # Try to find common index column
         common_cols = set(output_df.columns).intersection(set(supporting_df.columns))
+        #should be a parameter, and have fallback options
         index_candidates = ['year', 'id', 'index', 'group', 'period']
 
         for candidate in index_candidates:
