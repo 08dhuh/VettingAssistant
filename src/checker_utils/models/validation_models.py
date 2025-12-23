@@ -5,14 +5,24 @@ from enum import Enum
 
 class ViolationType(Enum):
     RULE_OF_N = "rule_of_n"
+    RULE_OF_10 = "rule_of_10"
     DOMINANCE_D50 = "dominance_d50"
     DOMINANCE_D67 = "dominance_d67"
+    # Regression-specific violations
+    INSUFFICIENT_DF = "insufficient_degrees_of_freedom"
+    NUMERIC_VARIABLE = "numeric_variable_disclosure_risk"
+    HIGH_R_SQUARED = "high_r_squared_with_intercept"
 
 
 class WarningType(Enum):
     PERCENTAGE_MISMATCH = "percentage_mismatch"
     METADATA_INCOMPLETE = "metadata_incomplete"
     DATA_TYPE_MISMATCH = "data_type_mismatch"
+    # Regression-specific warnings
+    LOW_R_SQUARED = "low_r_squared"
+    LOW_DF_WITH_CONTINUOUS = "low_df_with_continuous"
+    VARIABLE_TYPE_UNKNOWN = "variable_type_unknown"
+    VARIABLE_MISMATCH = "variable_mismatch"
 
 
 @dataclass
@@ -66,6 +76,10 @@ class DatasetMetadata:
     percentage_columns: List[str] = field(default_factory=list)  # Columns identified as percentages
     sample_size_column: Optional[str] = None  # Column containing sample sizes/counts
     raw_description: str = ""
+    # Regression-specific fields
+    regression_type: Optional[str] = None  # "OLS", "logit", "probit", etc.
+    variable_types: Dict[str, str] = field(default_factory=dict)  # variable_name: "continuous"/"binary"/"unknown"
+    outcome_variable: Optional[str] = None  # What the regression is predicting
 
     def is_complete(self) -> bool:
         """Check if all required metadata is present"""
@@ -76,3 +90,80 @@ class DatasetMetadata:
             self.data_description,
             self.variables
         ])
+
+
+@dataclass
+class RegressionCoefficient:
+    """A single coefficient from a regression model output"""
+    variable_name: str
+    coefficient: float
+    std_error: Optional[float] = None
+    significance_level: int = 0  # 0=none, 1=*, 2=**, 3=***
+    variable_type: Optional[str] = None  # "continuous", "binary", "categorical", or None
+
+    def __str__(self) -> str:
+        stars = "*" * self.significance_level
+        return f"{self.variable_name}: {self.coefficient}{stars}"
+
+
+@dataclass
+class RegressionMetadata:
+    """Metadata for regression model outputs"""
+    n_observations: int
+    r_squared: float
+    coefficients: List[RegressionCoefficient] = field(default_factory=list)
+    has_intercept: bool = False
+    regression_type: str = "OLS"
+
+    _INTERCEPT_NAMES = {"constant", "intercept", "_cons"}
+
+    def __post_init__(self):
+        """Detect intercept from coefficient names if not explicitly set"""
+        if not self.has_intercept and self.coefficients:
+            self.has_intercept = any(
+                coef.variable_name.lower() in self._INTERCEPT_NAMES
+                for coef in self.coefficients
+            )
+
+    @property
+    def n_independent_vars(self) -> int:
+        """Count of coefficients excluding intercept"""
+        if not self.has_intercept:
+            return len(self.coefficients)
+        return sum(
+            1 for coef in self.coefficients
+            if coef.variable_name.lower() not in self._INTERCEPT_NAMES
+        )
+
+    @property
+    def degrees_of_freedom(self) -> int:
+        """Degrees of freedom: n - k - 1"""
+        return self.n_observations - self.n_independent_vars - 1
+
+    @property
+    def has_continuous_variable(self) -> bool:
+        """True if any coefficient has variable_type='continuous'"""
+        return any(
+            coef.variable_type == "continuous"
+            for coef in self.coefficients
+        )
+
+
+@dataclass
+class RegressionValidationResult:
+    """Validation result specific to regression outputs"""
+    passed: bool
+    violations: List[Violation]
+    warnings: List[Warning] = field(default_factory=list)
+    regression_metadata: Optional[RegressionMetadata] = None
+    description_metadata: Optional[DatasetMetadata] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def summary(self) -> str:
+        status = "PASS" if self.passed else "FAIL"
+        return f"{status}: {len(self.violations)} violations, {len(self.warnings)} warnings"
+
+    @property
+    def has_warnings(self) -> bool:
+        return len(self.warnings) > 0

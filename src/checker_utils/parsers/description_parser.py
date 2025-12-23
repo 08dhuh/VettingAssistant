@@ -100,6 +100,23 @@ Extract the following information:
 6. **percentage_columns**: List of column names that represent percentages, shares, or proportions (array of strings)
 7. **sample_size_column**: Name of the column containing sample sizes/counts, if mentioned (string or null)
 
+For REGRESSION outputs, also extract:
+8. **regression_type**: Type of regression model (string or null)
+   - If mentions "linear regression", "OLS", or just "regression" → "OLS"
+   - If mentions "logit" or "logistic" → "logit"
+   - If mentions "probit" → "probit"
+   - If not a regression output → null
+
+9. **variable_types**: For each variable, infer its type based on description (object)
+   - If description contains "indicator", "dummy", "binary", "flag", "yes/no", "0/1" → "binary"
+   - If description contains "income", "age", "amount", "value", "price", "salary", "wage", "count", "number of", "rate", "score", "index" → "continuous"
+   - If unclear or no keywords match → "unknown"
+
+10. **outcome_variable**: What the regression is predicting/modeling (string or null)
+    - Extract the dependent variable or outcome being modeled
+    - Keep it concise (e.g., "number of children", "employment status")
+    - null if not a regression output
+
 Description Document:
 {text_content}
 
@@ -114,10 +131,15 @@ Return JSON in this exact format:
     "another_variable": "description"
   }},
   "percentage_columns": ["column1", "column2"],
-  "sample_size_column": "column_name or null"
+  "sample_size_column": "column_name or null",
+  "regression_type": "OLS or logit or probit or null",
+  "variable_types": {{
+    "variable_name": "continuous or binary or unknown"
+  }},
+  "outcome_variable": "string or null"
 }}
 
-If information is not available, use null for strings or [] for arrays.
+If information is not available, use null for strings or [] for arrays or {{}} for objects.
 """
 
         try:
@@ -164,6 +186,9 @@ If information is not available, use null for strings or [] for arrays.
                 percentage_columns=parsed_data.get("percentage_columns", []),
                 sample_size_column=parsed_data.get("sample_size_column"),
                 raw_description=text_content,
+                regression_type=parsed_data.get("regression_type"),
+                variable_types=parsed_data.get("variable_types", {}),
+                outcome_variable=parsed_data.get("outcome_variable"),
             )
 
             return metadata

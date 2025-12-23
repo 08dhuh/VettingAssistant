@@ -212,7 +212,9 @@ def main():
                     # Keep the _is_violation for styling, then drop it
                     def style_violations(row):
                         is_fail = d50_df.loc[row.name, '_is_violation'] if '_is_violation' in d50_df.columns else False
-                        return ['background-color: #ffcccc' if is_fail else '' for _ in row]
+                        if is_fail:
+                            return ['background-color: #f8d7da; color: #721c24' for _ in row]
+                        return ['background-color: #d4edda; color: #155724' for _ in row]
 
                     display_df = d50_df.drop(columns=['_is_violation'])
                     styled_df = display_df.style.apply(style_violations, axis=1)
@@ -226,7 +228,9 @@ def main():
                     # Create styled dataframe
                     def style_violations_d67(row):
                         is_fail = d67_df.loc[row.name, '_is_violation'] if '_is_violation' in d67_df.columns else False
-                        return ['background-color: #ffcccc' if is_fail else '' for _ in row]
+                        if is_fail:
+                            return ['background-color: #f8d7da; color: #721c24' for _ in row]
+                        return ['background-color: #d4edda; color: #155724' for _ in row]
 
                     display_df = d67_df.drop(columns=['_is_violation'])
                     styled_df = display_df.style.apply(style_violations_d67, axis=1)

@@ -5,6 +5,9 @@ from .validation_models import (
     Warning,
     ValidationResult,
     DatasetMetadata,
+    RegressionCoefficient,
+    RegressionMetadata,
+    RegressionValidationResult,
 )
 
 __all__ = [
@@ -14,4 +17,7 @@ __all__ = [
     "Warning",
     "ValidationResult",
     "DatasetMetadata",
+    "RegressionCoefficient",
+    "RegressionMetadata",
+    "RegressionValidationResult",
 ]
